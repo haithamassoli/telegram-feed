@@ -22,6 +22,48 @@
   --warning: #f59e0b;
   --warning-bg: rgba(245, 158, 11, 0.06);
   --success: #10b981;
+
+  /* Theme-aware neutral (used for scrollbar, spinner, skeleton) */
+  --neutral-faint: rgba(255, 255, 255, 0.06);
+  --neutral-subtle: rgba(255, 255, 255, 0.08);
+  --neutral-muted: rgba(255, 255, 255, 0.12);
+  --neutral-medium: rgba(255, 255, 255, 0.15);
+  --shadow-card-hover: rgba(0, 0, 0, 0.3);
+  --pill-bg: rgba(12, 18, 36, 0.82);
+  --pill-bg-hover: rgba(15, 23, 48, 0.9);
+}
+
+/* ===== Light Theme ===== */
+[data-theme="light"] {
+  --bg-deep: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.75);
+  --bg-card-border: rgba(0, 0, 0, 0.08);
+  --bg-input: rgba(241, 245, 249, 0.9);
+  --bg-input-focus: rgba(226, 232, 240, 0.95);
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  --accent: #2563eb;
+  --accent-hover: #3b82f6;
+  --accent-glow: rgba(37, 99, 235, 0.2);
+  --accent-subtle: rgba(37, 99, 235, 0.06);
+
+  --error: #dc2626;
+  --error-bg: rgba(220, 38, 38, 0.06);
+  --warning: #d97706;
+  --warning-bg: rgba(217, 119, 6, 0.06);
+  --success: #059669;
+
+  --neutral-faint: rgba(0, 0, 0, 0.05);
+  --neutral-subtle: rgba(0, 0, 0, 0.07);
+  --neutral-muted: rgba(0, 0, 0, 0.12);
+  --neutral-medium: rgba(0, 0, 0, 0.15);
+  --shadow-card-hover: rgba(0, 0, 0, 0.08);
+  --pill-bg: rgba(255, 255, 255, 0.88);
+  --pill-bg-hover: rgba(255, 255, 255, 0.95);
 }
 
 @theme inline {
@@ -43,6 +85,8 @@
   --color-warning: var(--warning);
   --color-warning-bg: var(--warning-bg);
   --color-success: var(--success);
+  --color-pill-bg: var(--pill-bg);
+  --color-pill-bg-hover: var(--pill-bg-hover);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -61,6 +105,13 @@ body {
     radial-gradient(ellipse 50% 50% at 50% 50%, rgba(59, 130, 246, 0.02) 0%, transparent 70%),
     var(--bg-deep);
 }
+[data-theme="light"] .bg-atmosphere {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(37, 99, 235, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 80% at 80% 90%, rgba(6, 182, 212, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(37, 99, 235, 0.015) 0%, transparent 70%),
+    var(--bg-deep);
+}
 
 /* Frosted glass card */
 .glass-card {
@@ -68,6 +119,9 @@ body {
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
   border: 1px solid var(--bg-card-border);
+}
+[data-theme="light"] .glass-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 /* Subtle noise overlay */
@@ -118,17 +172,17 @@ input:focus-visible,
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--neutral-faint);
   border-radius: 2px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--neutral-muted);
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.06) transparent;
+  scrollbar-color: var(--neutral-faint) transparent;
 }
 
 /* Pulse animation for loading */
@@ -165,7 +219,7 @@ input:focus-visible,
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.15);
+  border: 2px solid var(--neutral-medium);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin-smooth 0.7s linear infinite;
@@ -227,7 +281,7 @@ input:focus-visible,
 
 /* Capacity bar */
 .capacity-track {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--neutral-faint);
 }
 .capacity-fill {
   background: linear-gradient(90deg, var(--accent), var(--accent-hover));
@@ -270,7 +324,7 @@ input:focus-visible,
 }
 .msg-card:hover .msg-card-inner {
   transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(59, 130, 246, 0.08);
+  box-shadow: 0 4px 20px var(--shadow-card-hover), 0 0 0 1px rgba(59, 130, 246, 0.08);
 }
 
 /* Skeleton shimmer */
@@ -282,9 +336,9 @@ input:focus-visible,
 .skeleton-shimmer {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.03) 0%,
-    rgba(255, 255, 255, 0.06) 40%,
-    rgba(255, 255, 255, 0.03) 80%
+    var(--neutral-faint) 0%,
+    var(--neutral-subtle) 40%,
+    var(--neutral-faint) 80%
   );
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
@@ -302,11 +356,11 @@ input:focus-visible,
   background: transparent;
 }
 .timeline-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--neutral-subtle);
   border-radius: 2px;
 }
 .timeline-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--neutral-muted);
 }
 
 /* Animate spin for refresh */

@@ -2,13 +2,16 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { ThemeProvider } from "@/lib/theme-context";
 import { AuthScreen } from "@/components/auth-screen";
 import { AppErrorBoundary } from "@/components/error-boundary";
 import { Sidebar } from "@/components/sidebar";
 import { Timeline } from "@/components/timeline";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useChannels } from "@/hooks/use-channels";
 import { useTimeline } from "@/hooks/use-timeline";
 import { useOnlineStatus } from "@/hooks/use-online-status";
+import { useServiceWorker } from "@/hooks/use-service-worker";
 import { getClient } from "@/lib/telegram";
 import { CachedMessage } from "@/lib/types";
 import { updateCache } from "@/lib/messages";
@@ -203,12 +206,15 @@ function AppContent() {
           </div>
         </div>
 
-        <button
-          onClick={logout}
-          className="text-xs text-secondary hover:text-foreground transition-colors cursor-pointer px-3 py-2 -mr-3 rounded-lg"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <button
+            onClick={logout}
+            className="text-xs text-secondary hover:text-foreground transition-colors cursor-pointer px-3 py-2 -mr-3 rounded-lg"
+          >
+            Sign out
+          </button>
+        </div>
       </header>
 
       {/* Main layout: sidebar + content */}
@@ -248,11 +254,15 @@ function AppContent() {
 }
 
 export default function Home() {
+  useServiceWorker();
+
   return (
-    <AuthProvider>
-      <AppErrorBoundary>
-        <AppContent />
-      </AppErrorBoundary>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppErrorBoundary>
+          <AppContent />
+        </AppErrorBoundary>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

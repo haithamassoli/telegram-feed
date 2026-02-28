@@ -57,8 +57,8 @@ function NewMessagesBanner({
       <button
         onClick={onClick}
         className="new-msgs-pill pointer-events-auto flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full cursor-pointer
-          bg-[rgba(12,18,36,0.82)] backdrop-blur-xl border border-accent/15
-          hover:border-accent/30 hover:bg-[rgba(15,23,48,0.9)]
+          bg-pill-bg backdrop-blur-xl border border-accent/15
+          hover:border-accent/30 hover:bg-pill-bg-hover
           transition-all duration-200 group"
       >
         {/* Accent dot */}
