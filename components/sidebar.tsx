@@ -100,12 +100,12 @@ export function Sidebar({ isOpen, onClose, channels, addChannel, removeChannel, 
               }}
               placeholder="channel_username"
               disabled={isLoading}
-              className="w-full h-10 pl-7 pr-10 rounded-lg bg-input border border-card-border text-foreground placeholder:text-muted text-sm input-glow focus:outline-none focus:bg-input-focus transition-all duration-200 disabled:opacity-50"
+              className="w-full h-11 pl-7 pr-10 rounded-lg bg-input border border-card-border text-foreground placeholder:text-muted text-sm input-glow focus:outline-none focus:bg-input-focus transition-all duration-200 disabled:opacity-50"
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="absolute right-1.5 w-7 h-7 rounded-md flex items-center justify-center text-accent hover:bg-accent/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              className="absolute right-1 w-9 h-9 md:w-7 md:h-7 rounded-md flex items-center justify-center text-accent hover:bg-accent/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
               aria-label="Add channel"
             >
               {isLoading ? (
@@ -207,7 +207,7 @@ export function Sidebar({ isOpen, onClose, channels, addChannel, removeChannel, 
             {/* Close button */}
             <button
               onClick={handleClose}
-              className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-muted hover:text-foreground hover:bg-card transition-colors cursor-pointer z-10"
+              className="absolute top-3 right-3 w-11 h-11 rounded-lg flex items-center justify-center text-muted hover:text-foreground hover:bg-card transition-colors cursor-pointer z-10"
               aria-label="Close sidebar"
             >
               <svg
@@ -289,7 +289,7 @@ function ChannelRow({
       {/* Remove button */}
       <button
         onClick={() => onRemove(channel)}
-        className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-md flex items-center justify-center text-muted hover:text-error hover:bg-error-bg transition-all duration-150 shrink-0 cursor-pointer"
+        className="opacity-0 group-hover:opacity-100 md:w-6 md:h-6 w-11 h-11 rounded-md flex items-center justify-center text-muted hover:text-error hover:bg-error-bg transition-all duration-150 shrink-0 cursor-pointer max-md:opacity-100"
         aria-label={`Remove ${channel.title}`}
       >
         <svg

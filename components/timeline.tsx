@@ -222,7 +222,7 @@ function ReadMarkerBanner({
               role="button"
               data-interactive
               onClick={handleDismiss}
-              className="w-6 h-6 rounded-md flex items-center justify-center text-muted hover:text-secondary hover:bg-card transition-all"
+              className="w-8 h-8 md:w-6 md:h-6 rounded-md flex items-center justify-center text-muted hover:text-secondary hover:bg-card transition-all"
             >
               <svg
                 width="12"
@@ -701,7 +701,7 @@ export function Timeline({
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors cursor-pointer disabled:opacity-40"
+          className="flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors cursor-pointer disabled:opacity-40 px-3 py-2 -mr-3 rounded-lg"
         >
           <svg
             width="13"

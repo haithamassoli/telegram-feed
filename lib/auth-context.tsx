@@ -66,6 +66,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("unauthenticated");
   }, []);
 
+  // Global handler for unhandled GramJS session errors
+  useEffect(() => {
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      const msg = event.reason?.message || String(event.reason || "");
+      if (
+        msg.includes("AuthKey") ||
+        msg.includes("AUTH_KEY") ||
+        msg.includes("SESSION_EXPIRED") ||
+        msg.includes("SESSION_REVOKED")
+      ) {
+        event.preventDefault();
+        clearAll();
+        setStatus("unauthenticated");
+      }
+    };
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () => window.removeEventListener("unhandledrejection", handleRejection);
+  }, []);
+
   return (
     <AuthContext.Provider value={{ status, setAuthenticated, logout }}>
       {children}

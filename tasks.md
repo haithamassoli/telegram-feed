@@ -159,26 +159,26 @@
 
 ### Tasks
 
-- [ ] **6.1 — Finalize mobile responsive layout**
+- [x] **6.1 — Finalize mobile responsive layout**
   Ensure the sidebar collapses into a hamburger drawer on screens below `768px`. The timeline takes full width on mobile. All tap targets are at least 44x44px. Test touch interactions: swipe to dismiss drawer, scroll momentum, pull-to-refresh gesture. Verify layout on common breakpoints (375px, 390px, 768px, 1024px).
 
-- [ ] **6.2 — Implement offline mode**
+- [x] **6.2 — Implement offline mode**
   Detect network status via `navigator.onLine` and the `online`/`offline` events. When offline: show a top banner "You're offline — showing cached posts", display the cached timeline from localStorage, pause polling. When back online: dismiss the banner, resume polling, and fetch latest messages.
 
-- [ ] **6.3 — Handle localStorage quota errors**
+- [x] **6.3 — Handle localStorage quota errors**
   Wrap all localStorage writes in try/catch. If a `QuotaExceededError` is caught, show a persistent warning: "Storage full. Try removing channels or clearing old data." Provide a "Clear cache" button that removes `ts_messages` (keeps session and channels). Prevent data loss by prioritizing session and channel data over message cache.
 
-- [ ] **6.4 — Apply dark theme polish**
+- [x] **6.4 — Apply dark theme polish**
   Audit all components for consistent dark theme. Set the app background, card backgrounds, text colors, borders, input styles, and focus rings to a cohesive dark palette. Use Tailwind's dark color variables defined in `globals.css`. Ensure sufficient contrast for accessibility (WCAG AA for text).
 
-- [ ] **6.5 — Lazy-load GramJS bundle**
+- [x] **6.5 — Lazy-load GramJS bundle**
   GramJS is ~200KB+ gzipped. Use dynamic `import()` to load it only after the initial page paint. Show a small loading indicator ("Connecting to Telegram...") while the module loads. This keeps FCP fast by deferring the heavy bundle.
 
-- [ ] **6.6 — Configure static export and deployment**
+- [x] **6.6 — Configure static export and deployment**
   Set `output: 'export'` in `next.config.ts` (if not already done in 1.1). Verify `next build` produces a working static site in the `out/` directory. Configure Vercel deployment (or add a `vercel.json` if needed). Add CSP headers to block external scripts via `next.config.ts` headers config. Deploy and verify the live site works end-to-end.
 
-- [ ] **6.7 — Add error boundaries and global error handling**
+- [x] **6.7 — Add error boundaries and global error handling**
   Add a React error boundary around the main app to catch rendering crashes and show a recovery UI ("Something went wrong. Reload?"). Handle GramJS session expiry globally: detect `AuthKeyError` or similar, clear the session, and redirect to the auth screen with a message. Ensure no unhandled promise rejections from GramJS calls.
 
-- [ ] **6.8 — Performance validation**
+- [x] **6.8 — Performance validation**
   Run Lighthouse on the deployed site. Validate against PRD targets: FCP < 1s, TTI < 2s. Test timeline rendering performance with 200+ messages — ensure scroll stays smooth (no dropped frames). Profile localStorage read/write times to confirm < 50ms. Fix any bottlenecks found.

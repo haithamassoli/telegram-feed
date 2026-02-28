@@ -18,6 +18,19 @@ function get<T>(key: string): T | null {
   }
 }
 
+// Quota error listeners
+type QuotaListener = (exceeded: boolean) => void;
+const quotaListeners = new Set<QuotaListener>();
+
+export function onQuotaError(listener: QuotaListener): () => void {
+  quotaListeners.add(listener);
+  return () => quotaListeners.delete(listener);
+}
+
+function notifyQuotaError(exceeded: boolean) {
+  quotaListeners.forEach((l) => l(exceeded));
+}
+
 function set<T>(key: string, value: T): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -28,10 +41,16 @@ function set<T>(key: string, value: T): boolean {
       e instanceof DOMException &&
       (e.name === "QuotaExceededError" || e.code === 22)
     ) {
-      console.error("localStorage quota exceeded");
+      notifyQuotaError(true);
     }
     return false;
   }
+}
+
+// Clear only the message cache (preserves session + channels)
+export function clearMessageCache(): void {
+  remove(KEYS.messages);
+  notifyQuotaError(false);
 }
 
 function remove(key: string): void {

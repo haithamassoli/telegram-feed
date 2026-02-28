@@ -1,21 +1,36 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/auth-screen";
+import { AppErrorBoundary } from "@/components/error-boundary";
 import { Sidebar } from "@/components/sidebar";
 import { Timeline } from "@/components/timeline";
 import { useChannels } from "@/hooks/use-channels";
 import { useTimeline } from "@/hooks/use-timeline";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import { getClient } from "@/lib/telegram";
 import { CachedMessage } from "@/lib/types";
 import { updateCache } from "@/lib/messages";
+import { onQuotaError, clearMessageCache } from "@/lib/storage";
 import { usePolling } from "@/hooks/use-polling";
 
 function AppContent() {
   const { status, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isOnline } = useOnlineStatus();
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
   const { channels, addChannel, removeChannel, markInaccessible, isLoading: channelsLoading, maxChannels } = useChannels();
+
+  // Listen for quota errors
+  useEffect(() => {
+    return onQuotaError(setQuotaExceeded);
+  }, []);
+
+  const handleClearCache = useCallback(() => {
+    clearMessageCache();
+    setQuotaExceeded(false);
+  }, []);
 
   const handleChannelError = useCallback(
     (channelId: string) => {
@@ -58,7 +73,7 @@ function AppContent() {
 
   const { isPolling, floodToast, clearFloodToast } = usePolling({
     channels,
-    enabled: status === "authenticated" && channels.filter((c) => !c.inaccessible).length > 0,
+    enabled: status === "authenticated" && isOnline && channels.filter((c) => !c.inaccessible).length > 0,
     currentMessages: messages,
     onNewMessages: handlePollNewMessages,
     onChannelError: handleChannelError,
@@ -114,13 +129,46 @@ function AppContent() {
 
   return (
     <div className="h-screen bg-atmosphere noise-overlay flex flex-col overflow-hidden">
+      {/* Offline banner */}
+      {!isOnline && (
+        <div className="shrink-0 px-4 py-2 bg-warning-bg border-b border-warning/10 flex items-center justify-center gap-2 offline-banner">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-warning shrink-0">
+            <line x1="1" y1="1" x2="23" y2="23" />
+            <path d="M16.72 11.06A10.94 10.94 0 0119 12.55" />
+            <path d="M5 12.55a10.94 10.94 0 015.17-2.39" />
+            <path d="M10.71 5.05A16 16 0 0122.56 9" />
+            <path d="M1.42 9a15.91 15.91 0 014.7-2.88" />
+            <path d="M8.53 16.11a6 6 0 016.95 0" />
+            <line x1="12" y1="20" x2="12.01" y2="20" />
+          </svg>
+          <span className="text-xs font-medium text-warning">
+            You&apos;re offline — showing cached posts
+          </span>
+        </div>
+      )}
+
+      {/* Quota exceeded banner */}
+      {quotaExceeded && (
+        <div className="shrink-0 px-4 py-2 bg-error-bg border-b border-error/10 flex items-center justify-center gap-3">
+          <span className="text-xs text-error">
+            Storage full. Try removing channels or clearing old data.
+          </span>
+          <button
+            onClick={handleClearCache}
+            className="text-xs font-medium text-error underline underline-offset-2 hover:text-error/80 transition-colors cursor-pointer"
+          >
+            Clear cache
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <header className="h-14 border-b border-card-border flex items-center justify-between px-4 md:px-6 shrink-0 relative z-10">
         <div className="flex items-center gap-3">
           {/* Mobile hamburger */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center text-secondary hover:text-foreground hover:bg-card transition-colors cursor-pointer"
+            className="md:hidden w-11 h-11 rounded-lg flex items-center justify-center text-secondary hover:text-foreground hover:bg-card transition-colors cursor-pointer"
             aria-label="Open channels"
           >
             <svg
@@ -157,7 +205,7 @@ function AppContent() {
 
         <button
           onClick={logout}
-          className="text-xs text-secondary hover:text-foreground transition-colors cursor-pointer"
+          className="text-xs text-secondary hover:text-foreground transition-colors cursor-pointer px-3 py-2 -mr-3 rounded-lg"
         >
           Sign out
         </button>
@@ -202,7 +250,9 @@ function AppContent() {
 export default function Home() {
   return (
     <AuthProvider>
-      <AppContent />
+      <AppErrorBoundary>
+        <AppContent />
+      </AppErrorBoundary>
     </AuthProvider>
   );
 }
