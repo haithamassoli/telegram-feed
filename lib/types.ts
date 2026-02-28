@@ -3,6 +3,7 @@ export interface ChannelEntry {
   username: string;
   title: string;
   avatarUrl?: string;
+  inaccessible?: boolean;
 }
 
 export interface CachedMessage {

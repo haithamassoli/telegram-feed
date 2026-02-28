@@ -47,22 +47,22 @@
 
 ### Tasks
 
-- [ ] **2.1 — Create channel store hook**
+- [x] **2.1 — Create channel store hook**
   Create a custom hook `useChannels()` that reads the channel list from localStorage (`ts_channels`), exposes the list as state, and provides `addChannel(username)`, `removeChannel(id)` functions. Changes sync back to localStorage immediately. Enforce the 10-channel maximum in `addChannel`.
 
-- [ ] **2.2 — Implement channel validation via GramJS**
+- [x] **2.2 — Implement channel validation via GramJS**
   In `addChannel`, resolve the channel by username using GramJS `client.getEntity(username)`. Verify it's a public channel (not a private group or user). Extract and return `{ id, username, title }`. Handle errors: channel not found, channel is private, network error. Prevent adding duplicate channels.
 
-- [ ] **2.3 — Build the sidebar layout**
+- [x] **2.3 — Build the sidebar layout**
   Create a sidebar component for the main app screen. On desktop: fixed left sidebar (~280px). On mobile: hidden by default, toggled via a hamburger button as a slide-over drawer. The sidebar contains the channel list and the add-channel input. The main content area (timeline) sits to the right.
 
-- [ ] **2.4 — Build the "Add Channel" input**
+- [x] **2.4 — Build the "Add Channel" input**
   Add an input field at the top of the sidebar. Accepts a `@username` (with or without the `@` prefix). On submit, calls `addChannel` from the hook. Show a loading spinner while validating. Display inline error messages (not found, private, already added, limit reached). Clear input on success.
 
-- [ ] **2.5 — Build the channel list UI**
+- [x] **2.5 — Build the channel list UI**
   Render each channel in the sidebar as a row: channel title and `@username`. Each row has a remove button (trash icon or X). Clicking remove calls `removeChannel(id)`. Show an empty state message when no channels are added: "Add a channel to get started."
 
-- [ ] **2.6 — Handle inaccessible channels**
+- [x] **2.6 — Handle inaccessible channels**
   When fetching messages for a channel fails (e.g., channel went private), mark it with an error badge in the sidebar. Show a tooltip or small message: "Channel inaccessible." The channel stays in the list but is skipped in the timeline. The user can remove it manually.
 
 ---
