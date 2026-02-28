@@ -137,16 +137,16 @@
 
 ### Tasks
 
-- [ ] **5.1 — Implement polling interval**
+- [x] **5.1 — Implement polling interval**
   Set up a `setInterval` (3 minutes) that re-fetches the latest 20 messages per channel using GramJS. Run fetches in parallel across channels. Merge new messages into the timeline state using the existing merge/dedup utility. Clear the interval on unmount or logout. Pause polling when the tab is not visible (`document.visibilityState`).
 
-- [ ] **5.2 — Preserve scroll position during updates**
+- [x] **5.2 — Preserve scroll position during updates**
   When new messages are prepended to the timeline (newer messages at top), adjust the virtualizer's scroll offset so the user's current view doesn't jump. The user should not perceive any visual change when background polling adds new messages above the viewport.
 
-- [ ] **5.3 — Build the "New messages" sticky banner**
+- [x] **5.3 — Build the "New messages" sticky banner**
   When polling adds messages that are above the current viewport, show a sticky banner at the top: "X new messages ↑". Track the count of unseen new messages. Clicking the banner scrolls to the top and resets the counter. The banner disappears if the user manually scrolls to the top.
 
-- [ ] **5.4 — Handle FloodWaitError and backoff**
+- [x] **5.4 — Handle FloodWaitError and backoff**
   If any GramJS call during polling returns a `FloodWaitError`, pause polling for the duration specified by the error. Show a non-blocking toast: "Rate limited by Telegram. Retrying in Xs." Resume polling after the wait period. Apply exponential backoff if rate limits occur repeatedly.
 
 ---

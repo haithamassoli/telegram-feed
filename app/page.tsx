@@ -10,6 +10,7 @@ import { useTimeline } from "@/hooks/use-timeline";
 import { getClient } from "@/lib/telegram";
 import { CachedMessage } from "@/lib/types";
 import { updateCache } from "@/lib/messages";
+import { usePolling } from "@/hooks/use-polling";
 
 function AppContent() {
   const { status, logout } = useAuth();
@@ -31,9 +32,35 @@ function AppContent() {
     hasMore,
     loadOlder,
     refresh,
+    updateMessages,
   } = useTimeline({
     channels,
     enabled: status === "authenticated",
+    onChannelError: handleChannelError,
+  });
+
+  // Track new messages count from polling
+  const [newMessageCount, setNewMessageCount] = useState(0);
+
+  const handlePollNewMessages = useCallback(
+    (merged: CachedMessage[], newCount: number) => {
+      updateMessages(merged, newCount);
+      if (newCount > 0) {
+        setNewMessageCount((prev) => prev + newCount);
+      }
+    },
+    [updateMessages]
+  );
+
+  const handleNewMessagesSeen = useCallback(() => {
+    setNewMessageCount(0);
+  }, []);
+
+  const { isPolling, floodToast, clearFloodToast } = usePolling({
+    channels,
+    enabled: status === "authenticated" && channels.filter((c) => !c.inaccessible).length > 0,
+    currentMessages: messages,
+    onNewMessages: handlePollNewMessages,
     onChannelError: handleChannelError,
   });
 
@@ -160,6 +187,11 @@ function AppContent() {
             onLoadOlder={loadOlder}
             onRefresh={refresh}
             onThumbnailVisible={handleThumbnailVisible}
+            newMessageCount={newMessageCount}
+            onNewMessagesSeen={handleNewMessagesSeen}
+            floodToast={floodToast}
+            onClearFloodToast={clearFloodToast}
+            isPolling={isPolling}
           />
         </main>
       </div>

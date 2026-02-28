@@ -158,6 +158,16 @@ export function useTimeline({ channels, enabled = true, onChannelError }: UseTim
     await fetchAllChannels(activeChannels);
   }, [channels, fetchAllChannels]);
 
+  // Callback for polling to update messages
+  const updateMessages = useCallback(
+    (merged: CachedMessage[], newCount: number) => {
+      if (newCount > 0) {
+        setMessages(merged);
+      }
+    },
+    []
+  );
+
   return {
     messages,
     isLoading,
@@ -166,5 +176,6 @@ export function useTimeline({ channels, enabled = true, onChannelError }: UseTim
     hasMore,
     loadOlder,
     refresh,
+    updateMessages,
   };
 }

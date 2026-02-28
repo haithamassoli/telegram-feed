@@ -31,6 +31,73 @@ function channelColor(channelId: string): string {
   return `hsl(${hue}, 70%, 65%)`;
 }
 
+// --- New Messages Banner ---
+function NewMessagesBanner({
+  count,
+  onClick,
+}: {
+  count: number;
+  onClick: () => void;
+}) {
+  const [prevCount, setPrevCount] = useState(count);
+  const [bump, setBump] = useState(false);
+
+  useEffect(() => {
+    if (count > prevCount) {
+      setBump(true);
+      const t = setTimeout(() => setBump(false), 260);
+      setPrevCount(count);
+      return () => clearTimeout(t);
+    }
+    setPrevCount(count);
+  }, [count, prevCount]);
+
+  return (
+    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+      <button
+        onClick={onClick}
+        className="new-msgs-pill pointer-events-auto flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full cursor-pointer
+          bg-[rgba(12,18,36,0.82)] backdrop-blur-xl border border-accent/15
+          hover:border-accent/30 hover:bg-[rgba(15,23,48,0.9)]
+          transition-all duration-200 group"
+      >
+        {/* Accent dot */}
+        <div className="relative flex items-center justify-center">
+          <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+          <div className="absolute w-1.5 h-1.5 rounded-full bg-accent animate-ping opacity-40" />
+        </div>
+
+        {/* Count + text */}
+        <span className="text-[11px] font-medium tracking-wide text-secondary group-hover:text-foreground transition-colors">
+          <span
+            className={`inline-block tabular-nums text-accent ${bump ? "new-msgs-count-bump" : ""}`}
+          >
+            {count}
+          </span>
+          {" "}new {count === 1 ? "message" : "messages"}
+        </span>
+
+        {/* Arrow */}
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+          className="text-accent/50 group-hover:text-accent transition-colors -ml-0.5"
+        >
+          <path
+            d="M5 8V2M2.5 4.5L5 2l2.5 2.5"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 // --- Toast notification ---
 function Toast({
   message,
@@ -403,6 +470,15 @@ interface TimelineProps {
   onLoadOlder: () => void;
   onRefresh: () => void;
   onThumbnailVisible?: (message: CachedMessage) => void;
+  /** Number of new messages from polling above the viewport */
+  newMessageCount?: number;
+  /** Called when user clicks the "new messages" pill or scrolls to top */
+  onNewMessagesSeen?: () => void;
+  /** Flood wait toast from polling */
+  floodToast?: string | null;
+  onClearFloodToast?: () => void;
+  /** Whether polling is active */
+  isPolling?: boolean;
 }
 
 export function Timeline({
@@ -415,6 +491,11 @@ export function Timeline({
   onLoadOlder,
   onRefresh,
   onThumbnailVisible,
+  newMessageCount = 0,
+  onNewMessagesSeen,
+  floodToast,
+  onClearFloodToast,
+  isPolling,
 }: TimelineProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -443,7 +524,7 @@ export function Timeline({
     setIsRefreshing(false);
   };
 
-  // Infinite scroll detection + read marker tracking
+  // Infinite scroll detection + read marker tracking + new messages auto-dismiss
   const handleScroll = useCallback(() => {
     const el = parentRef.current;
     if (!el) return;
@@ -456,6 +537,11 @@ export function Timeline({
       }
     }
 
+    // Auto-dismiss new messages banner when user scrolls to top
+    if (el.scrollTop < 50 && newMessageCount > 0) {
+      onNewMessagesSeen?.();
+    }
+
     // Track topmost visible message for read marker
     const items = virtualizer.getVirtualItems();
     if (items.length > 0) {
@@ -466,7 +552,7 @@ export function Timeline({
       ) || items[0];
       trackVisibleMessage(topItem.index);
     }
-  }, [isLoadingOlder, hasMore, onLoadOlder, virtualizer, trackVisibleMessage]);
+  }, [isLoadingOlder, hasMore, onLoadOlder, virtualizer, trackVisibleMessage, newMessageCount, onNewMessagesSeen]);
 
   // Handle jump to marker
   const handleJumpToMarker = useCallback(() => {
@@ -479,12 +565,19 @@ export function Timeline({
     }
   }, [findMarkerIndex, virtualizer, dismissBanner]);
 
-  // Show toast from hook or local state
-  const activeToast = toast || toastMessage;
+  // Handle new messages pill click — scroll to top
+  const handleNewMessagesPillClick = useCallback(() => {
+    virtualizer.scrollToIndex(0, { align: "start", behavior: "smooth" });
+    onNewMessagesSeen?.();
+  }, [virtualizer, onNewMessagesSeen]);
+
+  // Show toast from hook or local state or flood toast
+  const activeToast = floodToast || toast || toastMessage;
   const handleClearToast = useCallback(() => {
     clearToast();
     setToastMessage(null);
-  }, [clearToast]);
+    onClearFloodToast?.();
+  }, [clearToast, onClearFloodToast]);
 
   // Empty state: no channels
   if (!hasChannels) {
@@ -629,9 +722,18 @@ export function Timeline({
       </div>
 
       {/* Virtualized message list */}
+      <div className="flex-1 overflow-hidden relative">
+        {/* New messages pill */}
+        {newMessageCount > 0 && (
+          <NewMessagesBanner
+            count={newMessageCount}
+            onClick={handleNewMessagesPillClick}
+          />
+        )}
+
       <div
         ref={parentRef}
-        className="flex-1 overflow-y-auto px-3 md:px-6 timeline-scroll"
+        className="h-full overflow-y-auto px-3 md:px-6 timeline-scroll"
         onScroll={handleScroll}
       >
         <div className="max-w-2xl mx-auto relative py-4">
@@ -706,6 +808,7 @@ export function Timeline({
             </div>
           )}
         </div>
+      </div>
       </div>
 
       {/* Toast notification */}
