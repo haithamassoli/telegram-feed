@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { initClient, getClient, saveSession } from "@/lib/telegram";
+import { initClient, getClient, saveSession, API_ID, API_HASH } from "@/lib/telegram";
 
 type AuthStep = "phone" | "code" | "2fa";
 
@@ -20,14 +20,16 @@ export function AuthScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
-  const [phoneCodeHash, setPhoneCodeHash] = useState("");
   const [floodCountdown, setFloodCountdown] = useState(0);
+
+  // Resolvers for the callback-driven auth flow
+  const codeResolverRef = useRef<((code: string) => void) | null>(null);
+  const passwordResolverRef = useRef<((password: string) => void) | null>(null);
 
   const phoneRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus inputs on step change
   useEffect(() => {
     const timer = setTimeout(() => {
       if (step === "phone") phoneRef.current?.focus();
@@ -37,7 +39,6 @@ export function AuthScreen() {
     return () => clearTimeout(timer);
   }, [step]);
 
-  // Flood wait countdown
   useEffect(() => {
     if (floodCountdown <= 0) return;
     const interval = setInterval(() => {
@@ -66,46 +67,85 @@ export function AuthScreen() {
 
       try {
         const client = getClient() || (await initClient());
-        const result = await client.sendCode(
-          { apiId: parseInt(process.env.NEXT_PUBLIC_TELEGRAM_API_ID || "0", 10), apiHash: process.env.NEXT_PUBLIC_TELEGRAM_API_HASH || "" },
-          cleaned
-        );
-        setPhoneCodeHash(result.phoneCodeHash);
-        setStep("code");
+
+        // Use client.start() with callbacks — this is GramJS's recommended approach
+        // and avoids Turbopack bundling issues with direct Api class constructors
+        client
+          .start({
+            phoneNumber: cleaned,
+            phoneCode: () =>
+              new Promise<string>((resolve) => {
+                codeResolverRef.current = resolve;
+                setStep("code");
+                setLoading(false);
+              }),
+            password: () =>
+              new Promise<string>((resolve) => {
+                passwordResolverRef.current = resolve;
+                setStep("2fa");
+                setLoading(false);
+              }),
+            onError: (err: Error) => {
+              const msg = err.message || "";
+              if (msg.includes("PHONE_CODE_INVALID")) {
+                setError({ message: "Incorrect code. Please try again." });
+                setCode("");
+                setStep("code");
+              } else if (msg.includes("PASSWORD_HASH_INVALID")) {
+                setError({ message: "Incorrect password. Please try again." });
+                setPassword("");
+                setStep("2fa");
+              } else if (msg.includes("PHONE_CODE_EXPIRED")) {
+                setError({ message: "Code expired. Please try again." });
+                setCode("");
+                setStep("phone");
+              } else {
+                setError({ message: msg || "Authentication error" });
+              }
+              setLoading(false);
+              return true; // return true to not throw
+            },
+            apiId: API_ID,
+            apiHash: API_HASH,
+          })
+          .then(() => {
+            saveSession();
+            setAuthenticated();
+          })
+          .catch((err: unknown) => {
+            const msg =
+              err instanceof Error ? err.message : String(err);
+            if (msg.includes("FLOOD")) {
+              const match = msg.match(/(\d+)/);
+              const seconds = match ? parseInt(match[1], 10) : 60;
+              setFloodCountdown(seconds);
+              setError({
+                message: `Too many attempts. Please wait ${seconds}s`,
+                isFloodWait: true,
+                waitSeconds: seconds,
+              });
+            } else if (msg.includes("PHONE_NUMBER_INVALID")) {
+              setError({
+                message: "Invalid phone number. Include country code (e.g. +1)",
+              });
+            } else if (!msg.includes("RESTART")) {
+              setError({
+                message: msg || "Connection failed. Check your network.",
+              });
+            }
+            setLoading(false);
+          });
       } catch (err: unknown) {
-        if (
-          err &&
-          typeof err === "object" &&
-          "errorMessage" in err &&
-          (err as { errorMessage: string }).errorMessage === "FLOOD_WAIT"
-        ) {
-          const seconds = (err as { seconds?: number }).seconds || 60;
-          setFloodCountdown(seconds);
-          setError({
-            message: `Too many attempts. Please wait ${seconds}s`,
-            isFloodWait: true,
-            waitSeconds: seconds,
-          });
-        } else if (
-          err &&
-          typeof err === "object" &&
-          "errorMessage" in err &&
-          (err as { errorMessage: string }).errorMessage === "PHONE_NUMBER_INVALID"
-        ) {
-          setError({ message: "Invalid phone number. Include country code (e.g. +1)" });
-        } else {
-          setError({
-            message:
-              err instanceof Error
-                ? err.message
-                : "Connection failed. Check your network.",
-          });
-        }
-      } finally {
+        setError({
+          message:
+            err instanceof Error
+              ? err.message
+              : "Connection failed. Check your network.",
+        });
         setLoading(false);
       }
     },
-    [phone]
+    [phone, setAuthenticated]
   );
 
   const handleCodeSubmit = useCallback(
@@ -120,58 +160,12 @@ export function AuthScreen() {
       setLoading(true);
       setError(null);
 
-      try {
-        const client = getClient();
-        if (!client) throw new Error("Client not initialized");
-
-        await client.invoke(
-          new (await import("telegram/tl")).Api.auth.SignIn({
-            phoneNumber: phone.replace(/[^0-9+]/g, ""),
-            phoneCodeHash,
-            phoneCode: cleaned,
-          })
-        );
-
-        saveSession();
-        setAuthenticated();
-      } catch (err: unknown) {
-        if (
-          err &&
-          typeof err === "object" &&
-          "errorMessage" in err &&
-          (err as { errorMessage: string }).errorMessage ===
-            "SESSION_PASSWORD_NEEDED"
-        ) {
-          setStep("2fa");
-          setError(null);
-        } else if (
-          err &&
-          typeof err === "object" &&
-          "errorMessage" in err &&
-          (err as { errorMessage: string }).errorMessage === "PHONE_CODE_INVALID"
-        ) {
-          setError({ message: "Incorrect code. Please try again." });
-          setCode("");
-        } else if (
-          err &&
-          typeof err === "object" &&
-          "errorMessage" in err &&
-          (err as { errorMessage: string }).errorMessage === "PHONE_CODE_EXPIRED"
-        ) {
-          setError({ message: "Code expired. Requesting a new one..." });
-          setCode("");
-          setStep("phone");
-        } else {
-          setError({
-            message:
-              err instanceof Error ? err.message : "Verification failed",
-          });
-        }
-      } finally {
-        setLoading(false);
+      if (codeResolverRef.current) {
+        codeResolverRef.current(cleaned);
+        codeResolverRef.current = null;
       }
     },
-    [code, phone, phoneCodeHash, setAuthenticated]
+    [code]
   );
 
   const handlePasswordSubmit = useCallback(
@@ -185,43 +179,12 @@ export function AuthScreen() {
       setLoading(true);
       setError(null);
 
-      try {
-        const client = getClient();
-        if (!client) throw new Error("Client not initialized");
-
-        const { computeCheck } = await import("telegram/Password");
-        const passwordSrp = await client.invoke(
-          new (await import("telegram/tl")).Api.account.GetPassword()
-        );
-        const srp = await computeCheck(passwordSrp, password);
-        await client.invoke(
-          new (await import("telegram/tl")).Api.auth.CheckPassword({
-            password: srp,
-          })
-        );
-
-        saveSession();
-        setAuthenticated();
-      } catch (err: unknown) {
-        if (
-          err &&
-          typeof err === "object" &&
-          "errorMessage" in err &&
-          (err as { errorMessage: string }).errorMessage === "PASSWORD_HASH_INVALID"
-        ) {
-          setError({ message: "Incorrect password. Please try again." });
-          setPassword("");
-        } else {
-          setError({
-            message:
-              err instanceof Error ? err.message : "Authentication failed",
-          });
-        }
-      } finally {
-        setLoading(false);
+      if (passwordResolverRef.current) {
+        passwordResolverRef.current(password);
+        passwordResolverRef.current = null;
       }
     },
-    [password, setAuthenticated]
+    [password]
   );
 
   const stepIndicator = (
