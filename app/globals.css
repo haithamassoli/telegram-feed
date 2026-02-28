@@ -87,8 +87,8 @@
   --color-success: var(--success);
   --color-pill-bg: var(--pill-bg);
   --color-pill-bg-hover: var(--pill-bg-hover);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-ibm-plex-sans-arabic);
+  --font-mono: monospace;
 }
 
 body {
