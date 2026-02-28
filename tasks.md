@@ -115,16 +115,16 @@
 
 ### Tasks
 
-- [ ] **4.1 — Implement scroll position tracking**
+- [x] **4.1 — Implement scroll position tracking**
   Using the virtualizer's scroll state, determine the topmost fully visible message in the viewport. Debounce this calculation (500ms). On each debounced tick, save the message's `{ messageId, channelId, timestamp }` to localStorage as the read marker (`ts_read_marker`).
 
-- [ ] **4.2 — Build the "Jump to where you left off" banner**
+- [x] **4.2 — Build the "Jump to where you left off" banner**
   On app load, check if a read marker exists in localStorage. If it does, render a sticky banner at the top of the timeline: "Jump to where you left off." The banner should be dismissible (X button). Display the relative time of the marker ("from 3 hours ago") for context.
 
-- [ ] **4.3 — Implement scroll-to-marker logic**
+- [x] **4.3 — Implement scroll-to-marker logic**
   When the user clicks the "Jump to" banner, find the marked message in the current messages array by `messageId + channelId`. If found, scroll the virtualizer to that item's index. If not found in the current cache, fetch messages around the marker's timestamp for the relevant channel, merge them in, then scroll.
 
-- [ ] **4.4 — Handle stale read markers**
+- [x] **4.4 — Handle stale read markers**
   If the marker's message cannot be found even after fetching, scroll to the nearest message by timestamp. Show a brief toast: "Original message not available — scrolled to nearest." If the marker is very old (e.g., > 7 days), auto-dismiss it and don't show the banner.
 
 ---

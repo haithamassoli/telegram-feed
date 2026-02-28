@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useCallback, useState, memo } from "react";
+import { useRef, useCallback, useState, useEffect, memo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CachedMessage } from "@/lib/types";
+import { useReadMarker } from "@/hooks/use-read-marker";
 
 // --- Relative time formatter ---
 function relativeTime(timestamp: number): string {
@@ -28,6 +29,151 @@ function channelColor(channelId: string): string {
   }
   const hue = CHANNEL_HUES[Math.abs(hash) % CHANNEL_HUES.length];
   return `hsl(${hue}, 70%, 65%)`;
+}
+
+// --- Toast notification ---
+function Toast({
+  message,
+  onDismiss,
+}: {
+  message: string;
+  onDismiss: () => void;
+}) {
+  const [exiting, setExiting] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setExiting(true);
+      setTimeout(onDismiss, 200);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [onDismiss]);
+
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+      <div
+        className={`pointer-events-auto glass-card rounded-lg px-4 py-2.5 shadow-lg shadow-black/30 border border-card-border/60 max-w-sm ${
+          exiting ? "toast-exit" : "toast-enter"
+        }`}
+      >
+        <div className="flex items-center gap-2.5">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-accent shrink-0"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4M12 8h.01" />
+          </svg>
+          <p className="text-xs text-secondary leading-snug">{message}</p>
+        </div>
+        {/* Progress bar */}
+        <div className="mt-2 h-px bg-card-border/30 rounded-full overflow-hidden">
+          <div className="h-full bg-accent/30 toast-progress" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Read Marker Banner ---
+function ReadMarkerBanner({
+  timeLabel,
+  onJump,
+  onDismiss,
+}: {
+  timeLabel: string;
+  onJump: () => void;
+  onDismiss: () => void;
+}) {
+  const [exiting, setExiting] = useState(false);
+
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExiting(true);
+    setTimeout(onDismiss, 220);
+  };
+
+  const handleJump = () => {
+    setExiting(true);
+    setTimeout(onJump, 220);
+  };
+
+  return (
+    <div
+      className={`relative mx-auto max-w-2xl mb-3 pl-8 md:pl-10 ${
+        exiting ? "read-marker-banner-exit" : "read-marker-banner"
+      }`}
+    >
+      <button
+        onClick={handleJump}
+        className="read-marker-btn w-full glass-card rounded-xl px-4 py-3 relative overflow-hidden cursor-pointer group transition-all duration-200 hover:border-accent/20"
+      >
+        {/* Left accent edge (via CSS ::before) */}
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Pulsing marker dot */}
+            <div className="relative shrink-0">
+              <div className="w-2 h-2 rounded-full bg-accent marker-dot" />
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-foreground truncate">
+                Jump to where you left off
+              </p>
+              <p className="text-[11px] text-muted mt-0.5 font-mono tabular-nums">
+                {timeLabel}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 ml-3">
+            {/* Arrow indicator */}
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-accent/60 group-hover:text-accent transition-colors"
+            >
+              <path d="M12 5v14M5 12l7-7 7 7" />
+            </svg>
+
+            {/* Dismiss button */}
+            <div
+              role="button"
+              data-interactive
+              onClick={handleDismiss}
+              className="w-6 h-6 rounded-md flex items-center justify-center text-muted hover:text-secondary hover:bg-card transition-all"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              >
+                <path d="M3 3l6 6M9 3l-6 6" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </button>
+    </div>
+  );
 }
 
 // --- MessageCard ---
@@ -272,6 +418,17 @@ export function Timeline({
 }: TimelineProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const {
+    showBanner,
+    bannerTimeLabel,
+    dismissBanner,
+    findMarkerIndex,
+    trackVisibleMessage,
+    toast,
+    clearToast,
+  } = useReadMarker({ messages, enabled: hasChannels && messages.length > 0 });
 
   const virtualizer = useVirtualizer({
     count: messages.length,
@@ -286,16 +443,48 @@ export function Timeline({
     setIsRefreshing(false);
   };
 
-  // Infinite scroll detection
+  // Infinite scroll detection + read marker tracking
   const handleScroll = useCallback(() => {
     const el = parentRef.current;
-    if (!el || isLoadingOlder || !hasMore) return;
+    if (!el) return;
 
-    const { scrollTop, scrollHeight, clientHeight } = el;
-    if (scrollHeight - scrollTop - clientHeight < 300) {
-      onLoadOlder();
+    // Infinite scroll
+    if (!isLoadingOlder && hasMore) {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      if (scrollHeight - scrollTop - clientHeight < 300) {
+        onLoadOlder();
+      }
     }
-  }, [isLoadingOlder, hasMore, onLoadOlder]);
+
+    // Track topmost visible message for read marker
+    const items = virtualizer.getVirtualItems();
+    if (items.length > 0) {
+      const scrollTop = el.scrollTop;
+      // Find first item that's fully visible
+      const topItem = items.find(
+        (item) => item.start >= scrollTop
+      ) || items[0];
+      trackVisibleMessage(topItem.index);
+    }
+  }, [isLoadingOlder, hasMore, onLoadOlder, virtualizer, trackVisibleMessage]);
+
+  // Handle jump to marker
+  const handleJumpToMarker = useCallback(() => {
+    const { index, exact } = findMarkerIndex();
+    virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
+    dismissBanner();
+
+    if (!exact) {
+      setToastMessage("Original message not available — scrolled to nearest.");
+    }
+  }, [findMarkerIndex, virtualizer, dismissBanner]);
+
+  // Show toast from hook or local state
+  const activeToast = toast || toastMessage;
+  const handleClearToast = useCallback(() => {
+    clearToast();
+    setToastMessage(null);
+  }, [clearToast]);
 
   // Empty state: no channels
   if (!hasChannels) {
@@ -449,6 +638,15 @@ export function Timeline({
           {/* Timeline vertical line */}
           <div className="timeline-line absolute left-[14px] md:left-[18px] top-0 bottom-0 w-px" />
 
+          {/* Read marker banner */}
+          {showBanner && (
+            <ReadMarkerBanner
+              timeLabel={bannerTimeLabel}
+              onJump={handleJumpToMarker}
+              onDismiss={dismissBanner}
+            />
+          )}
+
           <div
             style={{
               height: `${virtualizer.getTotalSize()}px`,
@@ -509,6 +707,11 @@ export function Timeline({
           )}
         </div>
       </div>
+
+      {/* Toast notification */}
+      {activeToast && (
+        <Toast message={activeToast} onDismiss={handleClearToast} />
+      )}
     </div>
   );
 }

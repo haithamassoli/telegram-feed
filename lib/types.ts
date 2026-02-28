@@ -21,4 +21,5 @@ export interface ReadMarker {
   messageId: number;
   channelId: string;
   timestamp: number;
+  savedAt: number;
 }
