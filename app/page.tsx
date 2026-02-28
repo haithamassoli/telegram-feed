@@ -1,13 +1,74 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { AuthScreen } from "@/components/auth-screen";
 import { Sidebar } from "@/components/sidebar";
+import { Timeline } from "@/components/timeline";
+import { useChannels } from "@/hooks/use-channels";
+import { useTimeline } from "@/hooks/use-timeline";
+import { getClient } from "@/lib/telegram";
+import { CachedMessage } from "@/lib/types";
+import { updateCache } from "@/lib/messages";
 
 function AppContent() {
   const { status, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { channels, addChannel, removeChannel, markInaccessible, isLoading: channelsLoading, maxChannels } = useChannels();
+
+  const handleChannelError = useCallback(
+    (channelId: string) => {
+      markInaccessible(channelId, true);
+    },
+    [markInaccessible]
+  );
+
+  const {
+    messages,
+    isLoading,
+    isLoadingOlder,
+    error,
+    hasMore,
+    loadOlder,
+    refresh,
+  } = useTimeline({
+    channels,
+    enabled: status === "authenticated",
+    onChannelError: handleChannelError,
+  });
+
+  const handleThumbnailVisible = useCallback(
+    async (message: CachedMessage) => {
+      if (message.thumbnail) return;
+      const client = getClient();
+      if (!client) return;
+
+      try {
+        const entity = await client.getEntity(message.channelUsername);
+        const msgs = await client.getMessages(entity, {
+          ids: [message.id],
+        });
+        const msg = msgs?.[0];
+        if (!msg?.media) return;
+
+        const buffer = await client.downloadMedia(msg.media, {
+          thumb: 0,
+        });
+        if (!buffer) return;
+
+        const base64 =
+          typeof buffer === "string"
+            ? buffer
+            : `data:image/jpeg;base64,${Buffer.from(buffer).toString("base64")}`;
+
+        const updated: CachedMessage = { ...message, thumbnail: base64 };
+        updateCache([updated]);
+      } catch {
+        // Silently fail thumbnail loading
+      }
+    },
+    []
+  );
 
   if (status === "loading") {
     return (
@@ -80,34 +141,26 @@ function AppContent() {
         <Sidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          channels={channels}
+          addChannel={addChannel}
+          removeChannel={removeChannel}
+          isLoading={channelsLoading}
+          maxChannels={maxChannels}
         />
 
         {/* Timeline content area */}
-        <main className="flex-1 flex items-center justify-center overflow-y-auto">
-          <div className="text-center px-4">
-            <div className="w-12 h-12 rounded-xl bg-accent/5 border border-accent/10 flex items-center justify-center mx-auto mb-4">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-accent/40"
-              >
-                <path d="M22 2L11 13" />
-                <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-              </svg>
-            </div>
-            <p className="text-sm text-secondary mb-1">
-              Your timeline is empty
-            </p>
-            <p className="text-xs text-muted">
-              Add channels to start reading
-            </p>
-          </div>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Timeline
+            messages={messages}
+            isLoading={isLoading}
+            isLoadingOlder={isLoadingOlder}
+            error={error}
+            hasMore={hasMore}
+            hasChannels={channels.filter((c) => !c.inaccessible).length > 0}
+            onLoadOlder={loadOlder}
+            onRefresh={refresh}
+            onThumbnailVisible={handleThumbnailVisible}
+          />
         </main>
       </div>
     </div>

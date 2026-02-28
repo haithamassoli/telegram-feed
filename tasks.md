@@ -75,34 +75,34 @@
 
 ### Tasks
 
-- [ ] **3.1 — Implement message fetching via GramJS**
+- [x] **3.1 — Implement message fetching via GramJS**
   Create a function `fetchChannelMessages(channelId, limit, offsetId?)` that calls GramJS `client.getMessages()` and returns an array of `CachedMessage` objects. Map GramJS message objects to the `CachedMessage` interface. Handle `FloodWaitError` with backoff. Support pagination via `offsetId` for loading older messages.
 
-- [ ] **3.2 — Implement message merging and deduplication**
+- [x] **3.2 — Implement message merging and deduplication**
   Create a utility that takes multiple arrays of `CachedMessage[]` (one per channel), merges them into a single array, deduplicates by `channelId + messageId` composite key, and sorts by `date` descending. This utility will be used both for initial load and for incremental updates.
 
-- [ ] **3.3 — Implement message cache in localStorage**
+- [x] **3.3 — Implement message cache in localStorage**
   Create a caching layer around `ts_messages`. On fetch, merge new messages with cached ones using the dedup utility. Enforce a max of 200 messages per channel — evict the oldest when exceeded. Provide `getCachedMessages()` and `updateCache(messages)` functions. Total budget stays within ~5MB.
 
-- [ ] **3.4 — Create the timeline data hook**
+- [x] **3.4 — Create the timeline data hook**
   Create a `useTimeline()` hook that orchestrates: load cached messages from localStorage on mount, fetch fresh messages for all channels in parallel, merge and deduplicate, update state and cache. Expose: `messages[]`, `isLoading`, `error`, `loadOlder()`, `refresh()`. `loadOlder()` fetches the next batch using the oldest message's ID as offset.
 
-- [ ] **3.5 — Install and configure @tanstack/react-virtual**
+- [x] **3.5 — Install and configure @tanstack/react-virtual**
   Install `@tanstack/react-virtual`. Set up a virtualized list container for the timeline. Configure the virtualizer with estimated item sizes (messages vary in height). The virtualizer should handle the scrollable area and only render visible items plus a small overscan buffer.
 
-- [ ] **3.6 — Build the timeline message card component**
+- [x] **3.6 — Build the timeline message card component**
   Create a `MessageCard` component that renders a single timeline item: channel name (small, left-aligned), message text (truncated to ~300 chars with a "show more" toggle), relative timestamp ("2h ago", "yesterday"), and a click handler that opens `https://t.me/{channelUsername}/{messageId}` in a new tab. Use a clean, dark-themed card style.
 
-- [ ] **3.7 — Implement image thumbnail loading**
+- [x] **3.7 — Implement image thumbnail loading**
   For messages where `hasMedia` is true, lazily load the thumbnail. Use `IntersectionObserver` (or the virtualizer's visibility) to trigger GramJS `downloadMedia()` with thumbnail size only when the card is near the viewport. Convert the downloaded buffer to a base64 data URL and display it in the card. Cache thumbnails in the `CachedMessage.thumbnail` field.
 
-- [ ] **3.8 — Implement infinite scroll for older messages**
+- [x] **3.8 — Implement infinite scroll for older messages**
   Detect when the user scrolls near the bottom of the list (oldest messages). Trigger `loadOlder()` from the timeline hook to fetch the next batch. Show a loading spinner at the bottom while fetching. Stop requesting when a channel returns fewer messages than the requested limit (end of history).
 
-- [ ] **3.9 — Build the refresh mechanism**
+- [x] **3.9 — Build the refresh mechanism**
   Add a refresh button at the top of the timeline. On click, call `refresh()` from the timeline hook to re-fetch the latest messages for all channels. Merge new messages into the existing list without losing scroll position. Show a brief loading indicator during the fetch.
 
-- [ ] **3.10 — Build the timeline empty state**
+- [x] **3.10 — Build the timeline empty state**
   When no channels are added, show a centered message: "Add channels to start reading" with a prompt pointing to the sidebar. When channels exist but no messages are loaded yet, show a loading skeleton.
 
 ---

@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useChannels } from "@/hooks/use-channels";
 import { ChannelEntry } from "@/lib/types";
+import type { AddChannelResult } from "@/hooks/use-channels";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  channels: ChannelEntry[];
+  addChannel: (username: string) => Promise<AddChannelResult>;
+  removeChannel: (id: string) => void;
+  isLoading: boolean;
+  maxChannels: number;
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { channels, addChannel, removeChannel, isLoading, maxChannels } =
-    useChannels();
+export function Sidebar({ isOpen, onClose, channels, addChannel, removeChannel, isLoading, maxChannels }: SidebarProps) {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
