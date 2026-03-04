@@ -2,6 +2,7 @@
 
 import { useRef, useCallback, useState, useEffect, memo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import Image from "next/image";
 import { CachedMessage } from "@/lib/types";
 import { useReadMarker } from "@/hooks/use-read-marker";
 
@@ -39,19 +40,6 @@ function NewMessagesBanner({
   count: number;
   onClick: () => void;
 }) {
-  const [prevCount, setPrevCount] = useState(count);
-  const [bump, setBump] = useState(false);
-
-  useEffect(() => {
-    if (count > prevCount) {
-      setBump(true);
-      const t = setTimeout(() => setBump(false), 260);
-      setPrevCount(count);
-      return () => clearTimeout(t);
-    }
-    setPrevCount(count);
-  }, [count, prevCount]);
-
   return (
     <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
       <button
@@ -69,9 +57,7 @@ function NewMessagesBanner({
 
         {/* Count + text */}
         <span className="text-[11px] font-medium tracking-wide text-secondary group-hover:text-foreground transition-colors">
-          <span
-            className={`inline-block tabular-nums text-accent ${bump ? "new-msgs-count-bump" : ""}`}
-          >
+          <span key={count} className="inline-block tabular-nums text-accent new-msgs-count-bump">
             {count}
           </span>
           {" "}new {count === 1 ? "message" : "messages"}
@@ -375,10 +361,13 @@ const MessageCard = memo(function MessageCard({
             className="mt-3 rounded-lg overflow-hidden bg-surface/60 border border-card-border"
           >
             {message.thumbnail ? (
-              <img
+              <Image
                 src={message.thumbnail}
                 alt=""
-                className="w-full max-h-52 object-cover"
+                width={800}
+                height={520}
+                unoptimized
+                className="w-full h-auto max-h-52 object-cover"
                 loading="lazy"
               />
             ) : (
@@ -477,8 +466,6 @@ interface TimelineProps {
   /** Flood wait toast from polling */
   floodToast?: string | null;
   onClearFloodToast?: () => void;
-  /** Whether polling is active */
-  isPolling?: boolean;
 }
 
 export function Timeline({
@@ -495,7 +482,6 @@ export function Timeline({
   onNewMessagesSeen,
   floodToast,
   onClearFloodToast,
-  isPolling,
 }: TimelineProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -511,6 +497,7 @@ export function Timeline({
     clearToast,
   } = useReadMarker({ messages, enabled: hasChannels && messages.length > 0 });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => parentRef.current,

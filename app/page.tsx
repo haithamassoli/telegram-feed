@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { AuthScreen } from "@/components/auth-screen";
@@ -24,6 +24,10 @@ function AppContent() {
   const { isOnline } = useOnlineStatus();
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const { channels, addChannel, removeChannel, markInaccessible, isLoading: channelsLoading, maxChannels } = useChannels();
+  const activeChannels = useMemo(
+    () => channels.filter((channel) => !channel.inaccessible),
+    [channels]
+  );
 
   // Listen for quota errors
   useEffect(() => {
@@ -74,9 +78,9 @@ function AppContent() {
     setNewMessageCount(0);
   }, []);
 
-  const { isPolling, floodToast, clearFloodToast } = usePolling({
+  const { floodToast, clearFloodToast } = usePolling({
     channels,
-    enabled: status === "authenticated" && isOnline && channels.filter((c) => !c.inaccessible).length > 0,
+    enabled: status === "authenticated" && isOnline && activeChannels.length > 0,
     currentMessages: messages,
     onNewMessages: handlePollNewMessages,
     onChannelError: handleChannelError,
@@ -104,7 +108,9 @@ function AppContent() {
         const base64 =
           typeof buffer === "string"
             ? buffer
-            : `data:image/jpeg;base64,${Buffer.from(buffer).toString("base64")}`;
+            : `data:image/jpeg;base64,${toBase64(
+                buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
+              )}`;
 
         const updated: CachedMessage = { ...message, thumbnail: base64 };
         updateCache([updated]);
@@ -237,7 +243,7 @@ function AppContent() {
             isLoadingOlder={isLoadingOlder}
             error={error}
             hasMore={hasMore}
-            hasChannels={channels.filter((c) => !c.inaccessible).length > 0}
+            hasChannels={activeChannels.length > 0}
             onLoadOlder={loadOlder}
             onRefresh={refresh}
             onThumbnailVisible={handleThumbnailVisible}
@@ -245,7 +251,6 @@ function AppContent() {
             onNewMessagesSeen={handleNewMessagesSeen}
             floodToast={floodToast}
             onClearFloodToast={clearFloodToast}
-            isPolling={isPolling}
           />
         </main>
       </div>
@@ -265,4 +270,16 @@ export default function Home() {
       </AuthProvider>
     </ThemeProvider>
   );
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
 }

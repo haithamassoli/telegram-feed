@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 export function useOnlineStatus() {
   const [isOnline, setIsOnline] = useState(

@@ -36,31 +36,12 @@ export function useReadMarker({
   messages,
   enabled = true,
 }: UseReadMarkerOptions): UseReadMarkerReturn {
-  const [savedMarker, setSavedMarker] = useState<ReadMarker | null>(null);
-  const [showBanner, setShowBanner] = useState(false);
+  const [savedMarker] = useState<ReadMarker | null>(() =>
+    enabled ? loadValidSavedMarker() : null
+  );
+  const [showBanner, setShowBanner] = useState(Boolean(savedMarker));
   const [toast, setToast] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const initializedRef = useRef(false);
-
-  // Load saved marker on mount
-  useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
-    const marker = getReadMarker();
-    if (!marker) return;
-
-    // Check if marker is stale (> 7 days since it was saved)
-    const now = Date.now() / 1000;
-    const savedAt = marker.savedAt || marker.timestamp;
-    if (now - savedAt > STALE_THRESHOLD) {
-      removeReadMarker();
-      return;
-    }
-
-    setSavedMarker(marker);
-    setShowBanner(true);
-  }, []);
 
   // Track the topmost visible message (debounced)
   const trackVisibleMessage = useCallback(
@@ -150,6 +131,20 @@ export function useReadMarker({
     toast,
     clearToast,
   };
+}
+
+function loadValidSavedMarker(): ReadMarker | null {
+  const marker = getReadMarker();
+  if (!marker) return null;
+
+  const now = Date.now() / 1000;
+  const savedAt = marker.savedAt || marker.timestamp;
+  if (now - savedAt > STALE_THRESHOLD) {
+    removeReadMarker();
+    return null;
+  }
+
+  return marker;
 }
 
 function formatRelativeMarkerTime(timestamp: number): string {
