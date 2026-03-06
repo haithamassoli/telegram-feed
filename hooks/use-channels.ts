@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { ChannelEntry } from "@/lib/types";
 import { getChannels, setChannels } from "@/lib/storage";
 import { getClient } from "@/lib/telegram";
+import { toBase64 } from "@/lib/utils";
 
 const MAX_CHANNELS = 10;
 
@@ -87,10 +88,22 @@ export function useChannels() {
           };
         }
 
+        let avatarUrl: string | undefined;
+        try {
+          const buffer = await client.downloadProfilePhoto(entity);
+          if (buffer && buffer.length > 0) {
+            const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+            avatarUrl = `data:image/jpeg;base64,${toBase64(bytes)}`;
+          }
+        } catch {
+          // Fall back to letter avatar
+        }
+
         const channel: ChannelEntry = {
           id: entity.id.toString(),
           username: entity.username || username,
           title: entity.title || username,
+          avatarUrl,
         };
 
         const updated = [...current, channel];

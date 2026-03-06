@@ -17,6 +17,7 @@ import { CachedMessage } from "@/lib/types";
 import { updateCache } from "@/lib/messages";
 import { onQuotaError, clearMessageCache } from "@/lib/storage";
 import { usePolling } from "@/hooks/use-polling";
+import { toBase64 } from "@/lib/utils";
 
 function AppContent() {
   const { status, logout } = useAuth();
@@ -28,6 +29,14 @@ function AppContent() {
     () => channels.filter((channel) => !channel.inaccessible),
     [channels]
   );
+
+  const channelAvatars = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const ch of channels) {
+      if (ch.avatarUrl) map[ch.id] = ch.avatarUrl;
+    }
+    return map;
+  }, [channels]);
 
   // Listen for quota errors
   useEffect(() => {
@@ -251,6 +260,7 @@ function AppContent() {
             onNewMessagesSeen={handleNewMessagesSeen}
             floodToast={floodToast}
             onClearFloodToast={clearFloodToast}
+            channelAvatars={channelAvatars}
           />
         </main>
       </div>
@@ -272,14 +282,3 @@ export default function Home() {
   );
 }
 
-function toBase64(bytes: Uint8Array): string {
-  let binary = "";
-  const chunkSize = 0x8000;
-
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, i + chunkSize);
-    binary += String.fromCharCode(...chunk);
-  }
-
-  return btoa(binary);
-}

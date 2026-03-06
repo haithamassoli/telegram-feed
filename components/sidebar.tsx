@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import Image from "next/image";
 import { ChannelEntry } from "@/lib/types";
 import type { AddChannelResult } from "@/hooks/use-channels";
 
@@ -241,6 +242,7 @@ function ChannelRow({
   onRemove: (channel: ChannelEntry) => void;
 }) {
   const isInaccessible = channel.inaccessible;
+  const [imgError, setImgError] = useState(false);
 
   return (
     <li
@@ -249,30 +251,42 @@ function ChannelRow({
       }`}
       style={{ animationDelay: `${index * 40}ms` }}
     >
-      {/* Channel avatar placeholder */}
-      <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-          isInaccessible
-            ? "bg-error-bg border border-error/20"
-            : "bg-accent/10 border border-accent/15"
-        }`}
-      >
-        {isInaccessible ? (
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            className="text-error"
-          >
-            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 10.5a.75.75 0 110-1.5.75.75 0 010 1.5zM8.75 4.75a.75.75 0 00-1.5 0v3.5a.75.75 0 001.5 0v-3.5z" />
-          </svg>
-        ) : (
-          <span className="text-xs font-semibold text-accent uppercase">
-            {channel.title.charAt(0)}
-          </span>
-        )}
-      </div>
+      {/* Channel avatar */}
+      {channel.avatarUrl && !isInaccessible && !imgError ? (
+        <Image
+          src={channel.avatarUrl}
+          alt=""
+          width={32}
+          height={32}
+          unoptimized
+          className="w-8 h-8 rounded-full object-cover shrink-0"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <div
+          className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+            isInaccessible
+              ? "bg-error-bg border border-error/20"
+              : "bg-accent/10 border border-accent/15"
+          }`}
+        >
+          {isInaccessible ? (
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              className="text-error"
+            >
+              <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 10.5a.75.75 0 110-1.5.75.75 0 010 1.5zM8.75 4.75a.75.75 0 00-1.5 0v3.5a.75.75 0 001.5 0v-3.5z" />
+            </svg>
+          ) : (
+            <span className="text-xs font-semibold text-accent uppercase">
+              {channel.title.charAt(0)}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Channel info */}
       <div className="flex-1 min-w-0">

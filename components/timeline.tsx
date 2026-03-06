@@ -5,6 +5,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import Image from "next/image";
 import { CachedMessage } from "@/lib/types";
 import { useReadMarker } from "@/hooks/use-read-marker";
+import { ImagePreview } from "@/components/image-preview";
 
 // --- Relative time formatter ---
 function relativeTime(timestamp: number): string {
@@ -234,10 +235,14 @@ const MessageCard = memo(function MessageCard({
   message,
   index,
   onThumbnailVisible,
+  channelAvatarUrl,
+  onImageClick,
 }: {
   message: CachedMessage;
   index: number;
   onThumbnailVisible?: (message: CachedMessage) => void;
+  channelAvatarUrl?: string;
+  onImageClick?: (message: CachedMessage) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const color = channelColor(message.channelId);
@@ -311,16 +316,24 @@ const MessageCard = memo(function MessageCard({
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2 min-w-0">
             {/* Channel avatar */}
-            <div
-              className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold uppercase"
-              style={{
-                backgroundColor: `${color}18`,
-                color: color,
-                border: `1px solid ${color}30`,
-              }}
-            >
-              {message.channelTitle.charAt(0)}
-            </div>
+            {channelAvatarUrl ? (
+              <img
+                src={channelAvatarUrl}
+                alt=""
+                className="w-5 h-5 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold uppercase"
+                style={{
+                  backgroundColor: `${color}18`,
+                  color: color,
+                  border: `1px solid ${color}30`,
+                }}
+              >
+                {message.channelTitle.charAt(0)}
+              </div>
+            )}
             <span
               className="text-xs font-medium truncate"
               style={{ color }}
@@ -361,15 +374,24 @@ const MessageCard = memo(function MessageCard({
             className="mt-3 rounded-lg overflow-hidden bg-surface/60 border border-card-border"
           >
             {message.thumbnail ? (
-              <Image
-                src={message.thumbnail}
-                alt=""
-                width={800}
-                height={520}
-                unoptimized
-                className="w-full h-auto max-h-52 object-cover"
-                loading="lazy"
-              />
+              <div
+                data-interactive
+                className="cursor-zoom-in"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onImageClick?.(message);
+                }}
+              >
+                <Image
+                  src={message.thumbnail}
+                  alt=""
+                  width={800}
+                  height={520}
+                  unoptimized
+                  className="w-full h-auto max-h-52 object-cover"
+                  loading="lazy"
+                />
+              </div>
             ) : (
               <div
                 data-interactive
@@ -466,6 +488,8 @@ interface TimelineProps {
   /** Flood wait toast from polling */
   floodToast?: string | null;
   onClearFloodToast?: () => void;
+  /** Channel ID -> avatar base64 data URL */
+  channelAvatars?: Record<string, string>;
 }
 
 export function Timeline({
@@ -482,10 +506,12 @@ export function Timeline({
   onNewMessagesSeen,
   floodToast,
   onClearFloodToast,
+  channelAvatars,
 }: TimelineProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [previewMessage, setPreviewMessage] = useState<CachedMessage | null>(null);
 
   const {
     showBanner,
@@ -763,6 +789,8 @@ export function Timeline({
                     message={message}
                     index={virtualItem.index}
                     onThumbnailVisible={onThumbnailVisible}
+                    channelAvatarUrl={channelAvatars?.[message.channelId]}
+                    onImageClick={setPreviewMessage}
                   />
                 </div>
               );
@@ -801,6 +829,16 @@ export function Timeline({
       {/* Toast notification */}
       {activeToast && (
         <Toast message={activeToast} onDismiss={handleClearToast} />
+      )}
+
+      {/* Image lightbox */}
+      {previewMessage?.thumbnail && (
+        <ImagePreview
+          thumbnailSrc={previewMessage.thumbnail}
+          channelUsername={previewMessage.channelUsername}
+          messageId={previewMessage.id}
+          onClose={() => setPreviewMessage(null)}
+        />
       )}
     </div>
   );
