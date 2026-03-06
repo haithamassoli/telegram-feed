@@ -133,9 +133,36 @@ function AppContent() {
 
   const handleThumbnailVisible = useCallback(
     async (message: CachedMessage) => {
-      if (message.thumbnail) return;
       const client = getClient();
       if (!client) return;
+
+      // Handle audio/voice messages
+      if ((message.mediaType === "voice" || message.mediaType === "audio") && !message.audioSrc) {
+        try {
+          const entity = await client.getEntity(message.channelUsername);
+          const msgs = await client.getMessages(entity, {
+            ids: [message.id],
+          });
+          const msg = msgs?.[0];
+          if (!msg?.media) return;
+
+          const buffer = await client.downloadMedia(msg.media);
+          if (!buffer) return;
+
+          const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+          const mimeType = message.mediaType === "voice" ? "audio/ogg" : "audio/mpeg";
+          const audioSrc = `data:${mimeType};base64,${toBase64(bytes)}`;
+
+          const updated: CachedMessage = { ...message, audioSrc };
+          updateCache([updated]);
+        } catch {
+          // Silently fail audio loading
+        }
+        return;
+      }
+
+      // Handle image/video thumbnails
+      if (message.thumbnail) return;
 
       try {
         const entity = await client.getEntity(message.channelUsername);

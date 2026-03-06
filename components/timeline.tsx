@@ -6,6 +6,7 @@ import Image from "next/image";
 import { CachedMessage } from "@/lib/types";
 import { useReadMarker } from "@/hooks/use-read-marker";
 import { ImagePreview } from "@/components/image-preview";
+import { AudioPlayer } from "@/components/audio-player";
 
 // --- Relative time formatter ---
 function relativeTime(timestamp: number): string {
@@ -367,8 +368,56 @@ const MessageCard = memo(function MessageCard({
           )}
         </div>
 
-        {/* Media thumbnail */}
-        {message.hasMedia && (
+        {/* Audio player for voice/audio messages */}
+        {message.hasMedia && (message.mediaType === "voice" || message.mediaType === "audio") && message.audioSrc && (
+          <div className="mt-3" data-interactive>
+            <AudioPlayer
+              src={message.audioSrc}
+              duration={message.audioDuration}
+              waveform={message.audioWaveform}
+              title={message.audioTitle}
+              performer={message.audioPerformer}
+              isVoice={message.mediaType === "voice"}
+            />
+          </div>
+        )}
+
+        {/* Audio loading placeholder (no src yet) */}
+        {message.hasMedia && (message.mediaType === "voice" || message.mediaType === "audio") && !message.audioSrc && (
+          <div
+            ref={thumbnailRef}
+            className="mt-3 rounded-lg overflow-hidden bg-surface/60 border border-card-border"
+            data-interactive
+          >
+            <div className="h-16 flex items-center justify-center">
+              <div className="flex items-center gap-2 text-muted">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  {message.mediaType === "voice" ? (
+                    <>
+                      <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                      <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="23" />
+                      <line x1="8" y1="23" x2="16" y2="23" />
+                    </>
+                  ) : (
+                    <>
+                      <path d="M9 18V5l12-2v13" />
+                      <circle cx="6" cy="18" r="3" />
+                      <circle cx="18" cy="16" r="3" />
+                    </>
+                  )}
+                </svg>
+                <span className="text-xs">
+                  {message.mediaType === "voice" ? "Voice message" : "Audio"}
+                  {message.audioDuration ? ` · ${Math.floor(message.audioDuration / 60)}:${String(Math.floor(message.audioDuration % 60)).padStart(2, "0")}` : ""}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Media thumbnail (photos, videos, documents) */}
+        {message.hasMedia && message.mediaType !== "voice" && message.mediaType !== "audio" && (
           <div
             ref={thumbnailRef}
             className="mt-3 rounded-lg overflow-hidden bg-surface/60 border border-card-border"

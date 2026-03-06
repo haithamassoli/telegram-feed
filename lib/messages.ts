@@ -1,8 +1,71 @@
-import { CachedMessage } from "./types";
+import { CachedMessage, MediaType } from "./types";
 import { getClient } from "./telegram";
 import { getMessages, setMessages } from "./storage";
 
 const MAX_MESSAGES_PER_CHANNEL = 200;
+
+// --- Media type detection ---
+
+function decodeWaveform(waveformBytes: Buffer | Uint8Array | undefined): number[] | undefined {
+  if (!waveformBytes || waveformBytes.length === 0) return undefined;
+  // Waveform is bitpacked 5-bit values
+  const bars: number[] = [];
+  let bitOffset = 0;
+  while (bitOffset + 5 <= waveformBytes.length * 8) {
+    const byteIndex = Math.floor(bitOffset / 8);
+    const bitShift = bitOffset % 8;
+    const value = ((waveformBytes[byteIndex] | (waveformBytes[byteIndex + 1] || 0) << 8) >> bitShift) & 0x1f;
+    bars.push(value);
+    bitOffset += 5;
+  }
+  return bars.length > 0 ? bars : undefined;
+}
+
+interface MediaInfo {
+  mediaType?: MediaType;
+  audioDuration?: number;
+  audioTitle?: string;
+  audioPerformer?: string;
+  audioWaveform?: number[];
+}
+
+function extractMediaInfo(media: Record<string, unknown> | undefined): MediaInfo {
+  if (!media) return {};
+
+  const className = media.className as string | undefined;
+
+  if (className === "MessageMediaPhoto") {
+    return { mediaType: "photo" };
+  }
+
+  if (className === "MessageMediaDocument") {
+    const document = media.document as Record<string, unknown> | undefined;
+    if (!document) return { mediaType: "document" };
+
+    const attributes = document.attributes as Array<Record<string, unknown>> | undefined;
+    if (!attributes) return { mediaType: "document" };
+
+    for (const attr of attributes) {
+      if (attr.className === "DocumentAttributeAudio") {
+        const isVoice = !!attr.voice;
+        return {
+          mediaType: isVoice ? "voice" : "audio",
+          audioDuration: attr.duration as number | undefined,
+          audioTitle: attr.title as string | undefined,
+          audioPerformer: attr.performer as string | undefined,
+          audioWaveform: decodeWaveform(attr.waveform as Buffer | Uint8Array | undefined),
+        };
+      }
+      if (attr.className === "DocumentAttributeVideo") {
+        return { mediaType: "video" };
+      }
+    }
+
+    return { mediaType: "document" };
+  }
+
+  return {};
+}
 
 // --- 3.1: Message fetching via GramJS ---
 
@@ -25,16 +88,26 @@ export async function fetchChannelMessages(
 
     return result
       .filter((msg: Record<string, unknown>) => msg && msg.id)
-      .map((msg: Record<string, unknown>) => ({
-        id: msg.id as number,
-        channelId,
-        channelUsername,
-        channelTitle,
-        text: (msg.message as string) || "",
-        date: (msg.date as number) || 0,
-        hasMedia: !!msg.media,
-        thumbnail: undefined,
-      }));
+      .map((msg: Record<string, unknown>) => {
+        const media = msg.media as Record<string, unknown> | undefined;
+        const { mediaType, audioDuration, audioTitle, audioPerformer, audioWaveform } = extractMediaInfo(media);
+
+        return {
+          id: msg.id as number,
+          channelId,
+          channelUsername,
+          channelTitle,
+          text: (msg.message as string) || "",
+          date: (msg.date as number) || 0,
+          hasMedia: !!msg.media,
+          thumbnail: undefined,
+          mediaType,
+          audioDuration,
+          audioTitle,
+          audioPerformer,
+          audioWaveform,
+        };
+      });
   } catch (err: unknown) {
     if (
       err &&
@@ -73,8 +146,8 @@ export function mergeAndDeduplicate(
     for (const msg of arr) {
       const key = messageKey(msg);
       const existing = seen.get(key);
-      // Keep the newer version (prefer fresh data with thumbnail)
-      if (!existing || (msg.thumbnail && !existing.thumbnail)) {
+      // Keep the newer version (prefer fresh data with thumbnail/audio)
+      if (!existing || (msg.thumbnail && !existing.thumbnail) || (msg.audioSrc && !existing.audioSrc)) {
         seen.set(key, msg);
       }
     }

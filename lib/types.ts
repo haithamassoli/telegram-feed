@@ -6,6 +6,8 @@ export interface ChannelEntry {
   inaccessible?: boolean;
 }
 
+export type MediaType = "photo" | "video" | "audio" | "voice" | "document";
+
 export interface CachedMessage {
   id: number;
   channelId: string;
@@ -15,6 +17,12 @@ export interface CachedMessage {
   date: number;
   thumbnail?: string;
   hasMedia: boolean;
+  mediaType?: MediaType;
+  audioDuration?: number;
+  audioTitle?: string;
+  audioPerformer?: string;
+  audioWaveform?: number[];
+  audioSrc?: string;
 }
 
 export interface ReadMarker {
