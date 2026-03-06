@@ -561,6 +561,10 @@ input:focus-visible,
   animation: offline-slide-down 0.3s ease-out;
 }
 
+.install-banner {
+  animation: offline-slide-down 0.3s ease-out;
+}
+
 /* === Lightbox === */
 
 @keyframes lightbox-backdrop-in {

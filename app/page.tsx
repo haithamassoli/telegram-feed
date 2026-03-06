@@ -12,12 +12,48 @@ import { useChannels } from "@/hooks/use-channels";
 import { useTimeline } from "@/hooks/use-timeline";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { useServiceWorker } from "@/hooks/use-service-worker";
+import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { getClient } from "@/lib/telegram";
 import { CachedMessage } from "@/lib/types";
 import { updateCache } from "@/lib/messages";
 import { onQuotaError, clearMessageCache } from "@/lib/storage";
 import { usePolling } from "@/hooks/use-polling";
 import { toBase64 } from "@/lib/utils";
+
+function InstallBanner() {
+  const { showBanner, install, dismiss } = useInstallPrompt();
+
+  if (!showBanner) return null;
+
+  return (
+    <div className="shrink-0 px-4 py-2.5 bg-accent-subtle border-b border-accent/10 flex items-center justify-center gap-3 install-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent shrink-0">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+      </svg>
+      <span className="text-xs font-medium text-foreground">
+        Install TeleStream for a better experience
+      </span>
+      <button
+        onClick={install}
+        className="text-xs font-semibold text-white bg-accent hover:bg-accent-hover px-3 py-1 rounded-md transition-colors cursor-pointer"
+      >
+        Install
+      </button>
+      <button
+        onClick={dismiss}
+        className="text-secondary hover:text-foreground transition-colors cursor-pointer p-1 -mr-1"
+        aria-label="Dismiss"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+  );
+}
 
 function AppContent() {
   const { status, logout } = useAuth();
@@ -147,6 +183,9 @@ function AppContent() {
 
   return (
     <div className="h-screen bg-atmosphere noise-overlay flex flex-col overflow-hidden">
+      {/* Install app banner */}
+      <InstallBanner />
+
       {/* Offline banner */}
       {!isOnline && (
         <div className="shrink-0 px-4 py-2 bg-warning-bg border-b border-warning/10 flex items-center justify-center gap-2 offline-banner">
