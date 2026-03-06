@@ -39,13 +39,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await initClient(saved);
         const valid = await isAuthenticated();
-        setStatus(valid ? "authenticated" : "unauthenticated");
-        if (!valid) {
-          clearAll();
+        if (valid) {
+          setStatus("authenticated");
+        } else {
+          // Session string exists but getMe() failed — could be a temporary
+          // network issue. Keep the session and let the user retry instead of
+          // wiping credentials that may still be valid on the server.
+          setStatus("unauthenticated");
         }
       } catch {
+        // Connection error (network down, etc.) — don't clear the stored
+        // session so it can be retried on the next page load.
         setStatus("unauthenticated");
-        clearAll();
       }
     }
     restoreSession();
@@ -70,15 +75,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleRejection = (event: PromiseRejectionEvent) => {
       const msg = event.reason?.message || String(event.reason || "");
+      // Only clear session on truly fatal server-side revocations.
+      // Transient AuthKey errors (e.g. reconnect hiccups) should not
+      // wipe a valid session — GramJS auto-reconnect will handle those.
       if (
-        msg.includes("AuthKey") ||
-        msg.includes("AUTH_KEY") ||
         msg.includes("SESSION_EXPIRED") ||
-        msg.includes("SESSION_REVOKED")
+        msg.includes("SESSION_REVOKED") ||
+        msg.includes("USER_DEACTIVATED")
       ) {
         event.preventDefault();
         clearAll();
         setStatus("unauthenticated");
+      } else if (msg.includes("AuthKey") || msg.includes("AUTH_KEY")) {
+        // Suppress the error but don't wipe session — let auto-reconnect retry
+        event.preventDefault();
       }
     };
     window.addEventListener("unhandledrejection", handleRejection);

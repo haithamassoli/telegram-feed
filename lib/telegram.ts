@@ -18,7 +18,9 @@ export async function initClient(sessionString?: string) {
   const session = new StringSession(saved);
 
   client = new TelegramClient(session, API_ID, API_HASH, {
-    connectionRetries: 3,
+    connectionRetries: 10,
+    retryDelay: 2000,
+    autoReconnect: true,
     useWSS: true,
   });
 
